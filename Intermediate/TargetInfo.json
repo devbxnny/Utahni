@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "Utahni",
+			"Path": "..\\Source\\Utahni.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "UtahniEditor",
+			"Path": "..\\Source\\UtahniEditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}
