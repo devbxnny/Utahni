@@ -124,6 +124,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Shield", meta = (ClampMin = "0.0"))
 	float ShieldCooldownDuration = 1.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Shield", meta = (ClampMin = "0.01"))
+	float ShieldMaxHoldDuration = 3.0f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats", meta = (ClampMin = "0.01"))
 	float RollDuration = 0.35f;
 
@@ -255,6 +258,7 @@ protected:
 	void UpdateAttackHitboxTransform();
 	void CancelAttackState();
 	void EndShieldCooldown();
+	void EndShieldByTimeout();
 
 	void SetPartner(ABasePaperPlayer* NewPartner);
 	void StartFollowing();
@@ -325,6 +329,8 @@ private:
 	FTimerHandle AttackHitboxEndTimerHandle;
 	FTimerHandle ShieldBlockSuccessTimerHandle;
 	FTimerHandle ShieldCooldownTimerHandle;
+	FTimerHandle ShieldHoldTimerHandle;
+
 
 	bool bPauseMenuOpen = false;
 };

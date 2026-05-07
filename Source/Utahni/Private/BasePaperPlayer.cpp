@@ -324,7 +324,10 @@ void ABasePaperPlayer::OnCharacterDamaged(float DamageTaken, AActor* DamageCause
 	bWantsToShield = false;
 	bIsShieldingState = false;
 	bShieldBlockSuccessState = false;
+
 	GetWorldTimerManager().ClearTimer(ShieldBlockSuccessTimerHandle);
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
+
 	ResetFootstepSoundState();
 
 	if (bIsRolling)
@@ -350,6 +353,8 @@ void ABasePaperPlayer::OnCharacterDied(AActor* DamageCauser, AController* Instig
 
 	GetWorldTimerManager().ClearTimer(ShieldBlockSuccessTimerHandle);
 	GetWorldTimerManager().ClearTimer(ShieldCooldownTimerHandle);
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
+
 	ResetFootstepSoundState();
 
 	if (bIsRolling)
@@ -374,12 +379,15 @@ void ABasePaperPlayer::OnCharacterDied(AActor* DamageCauser, AController* Instig
 	GetWorldTimerManager().SetTimer(RespawnTimerHandle, this, &ABasePaperPlayer::RespawnToCheckpoint, 3.0f, false);
 }
 
+
 void ABasePaperPlayer::OnShieldBlocked(float BlockedDamage, AActor* DamageCauser, AController* InstigatedBy)
 {
 	if (IsDeadState() || bShieldOnCooldown)
 	{
 		return;
 	}
+
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 
 	bWantsToShield = false;
 	bIsShieldingState = false;
@@ -440,6 +448,7 @@ void ABasePaperPlayer::OnCharacterRespawned()
 
 	GetWorldTimerManager().ClearTimer(ShieldBlockSuccessTimerHandle);
 	GetWorldTimerManager().ClearTimer(ShieldCooldownTimerHandle);
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 
 	CancelAttackState();
 	DisableAttackHitbox();
@@ -762,6 +771,15 @@ void ABasePaperPlayer::StartShield()
 	if (!bWasShielding)
 	{
 		PlayCharacterSound(ShieldStartSound);
+
+		GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
+		GetWorldTimerManager().SetTimer(
+			ShieldHoldTimerHandle,
+			this,
+			&ABasePaperPlayer::EndShieldByTimeout,
+			ShieldMaxHoldDuration,
+			false
+		);
 	}
 
 	if (UCharacterMovementComponent* Movement = GetCharacterMovement())
@@ -772,9 +790,11 @@ void ABasePaperPlayer::StartShield()
 	}
 }
 
+
 void ABasePaperPlayer::StopShield()
 {
 	bWantsToShield = false;
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 
 	if (!bShieldBlockSuccessState)
 	{
@@ -789,12 +809,14 @@ void ABasePaperPlayer::UpdateShieldState()
 		bWantsToShield = false;
 		bIsShieldingState = false;
 		bShieldBlockSuccessState = false;
+		GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 		return;
 	}
 
 	if (bShieldOnCooldown)
 	{
 		bWantsToShield = false;
+		GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 
 		if (!bShieldBlockSuccessState)
 		{
@@ -810,6 +832,12 @@ void ABasePaperPlayer::UpdateShieldState()
 		{
 			bIsShieldingState = false;
 		}
+
+		if (!bIsShieldingState)
+		{
+			GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
+		}
+
 		return;
 	}
 
@@ -820,6 +848,7 @@ void ABasePaperPlayer::UpdateShieldState()
 	else if (!bWantsToShield && !bShieldBlockSuccessState)
 	{
 		bIsShieldingState = false;
+		GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
 	}
 
 	if (bIsShieldingState)
@@ -842,6 +871,29 @@ void ABasePaperPlayer::EndShieldBlockSuccess()
 void ABasePaperPlayer::EndShieldCooldown()
 {
 	bShieldOnCooldown = false;
+}
+
+void ABasePaperPlayer::EndShieldByTimeout()
+{
+	if (IsDeadState() || bShieldOnCooldown || !bIsShieldingState)
+	{
+		return;
+	}
+
+	bWantsToShield = false;
+	bIsShieldingState = false;
+	bShieldBlockSuccessState = false;
+	bShieldOnCooldown = true;
+
+	GetWorldTimerManager().ClearTimer(ShieldHoldTimerHandle);
+	GetWorldTimerManager().ClearTimer(ShieldCooldownTimerHandle);
+	GetWorldTimerManager().SetTimer(
+		ShieldCooldownTimerHandle,
+		this,
+		&ABasePaperPlayer::EndShieldCooldown,
+		ShieldCooldownDuration,
+		false
+	);
 }
 
 void ABasePaperPlayer::EnableAttackHitbox()
