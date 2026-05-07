@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "BasePaperCharacter.h"
+#include "InputAction.h"
+#include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
 #include "BasePaperPlayer.generated.h"
 
@@ -66,6 +68,7 @@ public:
 	bool IsAttackHitboxActive() const;
 
 protected:
+
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual bool IsRolling() const override;
 	virtual bool IsWallSliding() const override;
@@ -117,6 +120,30 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
 	TObjectPtr<USoundBase> SwitchCharacterSound = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> DefaultMappingContext = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_MoveAction = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Jump = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Roll = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Attack = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Shield = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_SwitchCharacter = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> IA_Pause = nullptr;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat|Shield", meta = (ClampMin = "0.01"))
 	float ShieldBlockSuccessDuration = 0.15f;
@@ -240,7 +267,7 @@ protected:
 
 	void ShowDeathScreenAndRespawn();
 
-	void MoveRight(float Value);
+	void MoveRight(const FInputActionValue& Value);
 	void StartJump();
 	void StopJumpInput();
 	void StartRoll();

@@ -1,5 +1,8 @@
 #include "BasePaperPlayer.h"
 #include "HealthComponent.h"
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
+#include "InputActionValue.h"
 #include "Engine/Engine.h"
 #include "Camera/CameraComponent.h"
 #include "Components/BoxComponent.h"
@@ -113,6 +116,15 @@ void ABasePaperPlayer::BeginPlay()
 		}
 	}
 
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Sub =
+			ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Sub->AddMappingContext(DefaultMappingContext, 0);
+		}
+	}
+
 	UGameplayStatics::SetGamePaused(this, false);
 	bPauseMenuOpen = false;
 }
@@ -170,17 +182,18 @@ void ABasePaperPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	check(PlayerInputComponent);
+	UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent);
+	if (!EIC) return;
 
-	PlayerInputComponent->BindAxis(TEXT("MoveRight"), this, &ABasePaperPlayer::MoveRight);
-	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Pressed, this, &ABasePaperPlayer::StartJump);
-	PlayerInputComponent->BindAction(TEXT("Jump"), IE_Released, this, &ABasePaperPlayer::StopJumpInput);
-	PlayerInputComponent->BindAction(TEXT("Roll"), IE_Pressed, this, &ABasePaperPlayer::StartRoll);
-	PlayerInputComponent->BindAction(TEXT("Attack"), IE_Pressed, this, &ABasePaperPlayer::StartAttack);
-	PlayerInputComponent->BindAction(TEXT("Shield"), IE_Pressed, this, &ABasePaperPlayer::StartShield);
-	PlayerInputComponent->BindAction(TEXT("Shield"), IE_Released, this, &ABasePaperPlayer::StopShield);
-	PlayerInputComponent->BindAction(TEXT("SwitchCharacter"), IE_Pressed, this, &ABasePaperPlayer::SwitchCharacters);
-	PlayerInputComponent->BindAction(TEXT("Pause"), IE_Pressed, this, &ABasePaperPlayer::HandlePausePressed);
+	EIC->BindAction(IA_MoveAction, ETriggerEvent::Triggered, this, &ABasePaperPlayer::MoveRight);
+	EIC->BindAction(IA_Jump, ETriggerEvent::Started, this, &ABasePaperPlayer::StartJump);
+	EIC->BindAction(IA_Jump, ETriggerEvent::Completed, this, &ABasePaperPlayer::StopJumpInput);
+	EIC->BindAction(IA_Roll, ETriggerEvent::Started, this, &ABasePaperPlayer::StartRoll);
+	EIC->BindAction(IA_Attack, ETriggerEvent::Started, this, &ABasePaperPlayer::StartAttack);
+	EIC->BindAction(IA_Shield, ETriggerEvent::Started, this, &ABasePaperPlayer::StartShield);
+	EIC->BindAction(IA_Shield, ETriggerEvent::Completed, this, &ABasePaperPlayer::StopShield);
+	EIC->BindAction(IA_SwitchCharacter, ETriggerEvent::Started, this, &ABasePaperPlayer::SwitchCharacters);
+	EIC->BindAction(IA_Pause, ETriggerEvent::Started, this, &ABasePaperPlayer::HandlePausePressed);
 }
 
 void ABasePaperPlayer::HandlePausePressed()
@@ -472,17 +485,19 @@ void ABasePaperPlayer::OnCharacterRespawned()
 	}
 }
 
-void ABasePaperPlayer::MoveRight(float Value)
+void ABasePaperPlayer::MoveRight(const FInputActionValue& Value)
 {
+	float AxisValue = Value.Get<float>(); 
+
 	if (!bIsCurrentlyControlled)
 	{
-		LastMoveInput = 0.0f;
+		LastMoveInput = 0.0f;            
 		return;
 	}
 
 	if (IsDeadState() || IsHurt() || bIsShieldingState || bShieldBlockSuccessState)
 	{
-		LastMoveInput = 0.0f;
+		LastMoveInput = 0.0f;            
 
 		if (UCharacterMovementComponent* Movement = GetCharacterMovement())
 		{
@@ -490,14 +505,13 @@ void ABasePaperPlayer::MoveRight(float Value)
 			NewVelocity.X = 0.0f;
 			Movement->Velocity = NewVelocity;
 		}
-
 		return;
 	}
 
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	LastMoveInput = Value;
+	LastMoveInput = AxisValue;           
 
-	if (FMath::IsNearlyZero(Value))
+	if (FMath::IsNearlyZero(AxisValue))   
 	{
 		if (bIsAttacking && Movement && Movement->IsMovingOnGround())
 		{
@@ -508,15 +522,13 @@ void ABasePaperPlayer::MoveRight(float Value)
 		return;
 	}
 
-	SetFacingDirection(Value > 0.0f);
-	FacingDirection = Value > 0.0f ? 0.0f : 180.0f;
+	SetFacingDirection(AxisValue > 0.0f);                   
+	FacingDirection = AxisValue > 0.0f ? 0.0f : 180.0f;     
 
 	if (bIsRolling)
-	{
 		return;
-	}
 
-	float InputScale = Value;
+	float InputScale = AxisValue;         
 
 	if (bIsAttacking && Movement && Movement->IsMovingOnGround() && DefaultWalkSpeed > 0.0f)
 	{
