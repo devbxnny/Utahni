@@ -14,6 +14,9 @@
 #include "TimerManager.h"
 #include "UI/GameOverWidget.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Animation/AnimSequence.h"
+#include "PaperFlipbookComponent.h"
 
 ABasePaperPlayer::ABasePaperPlayer()
 {
@@ -150,6 +153,8 @@ void ABasePaperPlayer::Tick(float DeltaSeconds)
 			FMath::Abs(GetVelocity().X)
 		);
 	}
+
+	UpdateMushroom3DAnimation();
 
 	Super::Tick(DeltaSeconds);
 }
@@ -1478,4 +1483,117 @@ void ABasePaperPlayer::RefillHealthToFull()
 bool ABasePaperPlayer::IsAttackHitboxActive() const
 {
 	return bAttackHitboxActive;
+}
+
+void ABasePaperPlayer::ActivateMushroom3DForm()
+{
+	if (!bIsFoxCharacter)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* MushroomMesh = GetMushroom3DMesh();
+
+	if (!MushroomMesh)
+	{
+		return;
+	}
+
+	bMushroom3DFormActive = true;
+	bMushroomUsingWalkAnim = false;
+
+	if (GetSprite())
+	{
+		GetSprite()->SetVisibility(false);
+	}
+
+	MushroomMesh->SetVisibility(true);
+	MushroomMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+
+	if (MushroomIdleAnimation)
+	{
+		MushroomMesh->PlayAnimation(MushroomIdleAnimation, true);
+	}
+
+	GetWorldTimerManager().ClearTimer(Mushroom3DFormTimerHandle);
+
+	GetWorldTimerManager().SetTimer(
+		Mushroom3DFormTimerHandle,
+		this,
+		&ABasePaperPlayer::EndMushroom3DForm,
+		Mushroom3DFormDuration,
+		false
+	);
+}
+
+void ABasePaperPlayer::EndMushroom3DForm()
+{
+	USkeletalMeshComponent* MushroomMesh = GetMushroom3DMesh();
+
+	bMushroom3DFormActive = false;
+	bMushroomUsingWalkAnim = false;
+
+	if (MushroomMesh)
+	{
+		MushroomMesh->SetVisibility(false);
+		MushroomMesh->Stop();
+	}
+
+	if (GetSprite())
+	{
+		GetSprite()->SetVisibility(true);
+	}
+}
+
+void ABasePaperPlayer::UpdateMushroom3DAnimation()
+{
+	if (!bMushroom3DFormActive)
+	{
+		return;
+	}
+
+	USkeletalMeshComponent* MushroomMesh = GetMushroom3DMesh();
+
+	if (!MushroomMesh)
+	{
+		return;
+	}
+
+	const float HorizontalSpeed = FMath::Abs(GetVelocity().X);
+	const bool bShouldWalk = HorizontalSpeed > 5.0f;
+
+	if (bShouldWalk && !bMushroomUsingWalkAnim)
+	{
+		bMushroomUsingWalkAnim = true;
+
+		if (MushroomWalkAnimation)
+		{
+			MushroomMesh->PlayAnimation(MushroomWalkAnimation, true);
+		}
+	}
+	else if (!bShouldWalk && bMushroomUsingWalkAnim)
+	{
+		bMushroomUsingWalkAnim = false;
+
+		if (MushroomIdleAnimation)
+		{
+			MushroomMesh->PlayAnimation(MushroomIdleAnimation, true);
+		}
+	}
+}
+
+USkeletalMeshComponent* ABasePaperPlayer::GetMushroom3DMesh() const
+{
+	TArray<USkeletalMeshComponent*> SkeletalMeshes;
+	GetComponents<USkeletalMeshComponent>(SkeletalMeshes);
+
+	for (USkeletalMeshComponent* MeshComponent : SkeletalMeshes)
+	{
+		if (MeshComponent)
+		{
+			return MeshComponent;
+		}
+	}
+
+	return nullptr;
 }

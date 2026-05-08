@@ -13,6 +13,8 @@ class UPaperFlipbook;
 class USoundBase;
 class USpringArmComponent;
 class UUserWidget;
+class USkeletalMeshComponent;
+class UAnimSequence;
 
 UCLASS()
 class UTAHNI_API ABasePaperPlayer : public ABasePaperCharacter
@@ -44,6 +46,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Powerups")
 	void Activate100DamageBoost();
 
+	UFUNCTION(BlueprintCallable, Category = "Powerups")
+	void ActivateMushroom3DForm();
+
 	UFUNCTION(Exec)
 	void ToggleGodMode();
 
@@ -52,8 +57,6 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Cheats")
 	bool IsGodModeEnabled() const;
-
-
 
 	virtual float TakeDamage(
 		float DamageAmount,
@@ -175,6 +178,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Powerups", meta = (ClampMin = "0.0"))
 	float BoostedAttackDamage = 100.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Powerups")
+	bool bIsFoxCharacter = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Powerups")
+	float Mushroom3DFormDuration = 60.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Powerups")
+	TObjectPtr<UAnimSequence> MushroomIdleAnimation = nullptr;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Powerups")
+	TObjectPtr<UAnimSequence> MushroomWalkAnimation = nullptr;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.0"))
 	float Attack1HitStartTime = 0.04f;
 
@@ -269,6 +284,9 @@ protected:
 	void ApplyCameraSettings();
 	void UpdateAttackMoveSpeed();
 	void CheckFallDeath();
+	void EndMushroom3DForm();
+	void UpdateMushroom3DAnimation();
+	USkeletalMeshComponent* GetMushroom3DMesh() const;
 
 	void HandlePausePressed();
 
@@ -307,6 +325,8 @@ private:
 	bool bShieldOnCooldown = false;
 	bool bGodModeEnabled = false;
 	bool bJumpSoundPlayedThisAirTime = false;
+	bool bMushroom3DFormActive = false;
+	bool bMushroomUsingWalkAnim = false;
 
 	float LastMoveInput = 0.0f;
 	float RollDirection = 1.0f;
@@ -330,7 +350,7 @@ private:
 	FTimerHandle ShieldBlockSuccessTimerHandle;
 	FTimerHandle ShieldCooldownTimerHandle;
 	FTimerHandle ShieldHoldTimerHandle;
-
+	FTimerHandle Mushroom3DFormTimerHandle;
 
 	bool bPauseMenuOpen = false;
 };
